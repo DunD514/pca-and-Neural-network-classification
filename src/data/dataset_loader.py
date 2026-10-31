@@ -267,6 +267,12 @@ def scan_crack_samples(
 ) -> List[Dict[str, Any]]:
     """Scan and index all valid raw image and mask pairs from Underwater Crack dataset."""
     raw_path = Path(raw_dir)
+    if not (raw_path.exists() and (raw_path / "images").exists()):
+        alt_name = "underwater_cracks" if raw_path.name == "underwater_crack" else "underwater_crack"
+        alt_path = raw_path.parent / alt_name
+        if alt_path.exists() and (alt_path / "images").exists():
+            raw_path = alt_path
+
     samples: List[Dict[str, Any]] = []
 
     if raw_path.exists() and (raw_path / "images").exists():

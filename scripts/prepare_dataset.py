@@ -19,6 +19,48 @@ from src.data.dataset_loader import (
 from src.data.split_dataset import create_leakage_free_splits, save_split_manifest
 
 
+from PIL import Image
+
+def validate_and_enrich_samples(samples: list) -> tuple[list, list]:
+    valid_samples = []
+    errors = []
+    for s in samples:
+        img_path = s.get("image_path")
+        mask_path = s.get("mask_path")
+        if not img_path or not os.path.exists(img_path):
+            err = f"Missing image: {img_path}"
+            errors.append({"image_id": s.get("image_id"), "error": err})
+            continue
+        if not mask_path or not os.path.exists(mask_path):
+            err = f"Missing mask: {mask_path}"
+            errors.append({"image_id": s.get("image_id"), "error": err})
+            continue
+
+        try:
+            with Image.open(img_path) as im:
+                iw, ih = im.size
+                channels = len(im.getbands())
+            with Image.open(mask_path) as mk:
+                mw, mh = mk.size
+
+            if (iw, ih) != (mw, mh):
+                err = f"Dimension mismatch: image ({iw}x{ih}) vs mask ({mw}x{mh})"
+                errors.append({"image_id": s.get("image_id"), "error": err})
+                continue
+
+            s["image_width"] = iw
+            s["image_height"] = ih
+            s["image_shape"] = [ih, iw, channels]
+            s["mask_shape"] = [mh, mw]
+            s["is_valid"] = True
+            s["validation_error"] = None
+            valid_samples.append(s)
+        except Exception as e:
+            errors.append({"image_id": s.get("image_id"), "error": str(e)})
+
+    return valid_samples, errors
+
+
 def main():
     print("=" * 70)
     print("AI-POWERED UNDERWATER HULL INSPECTION DRONE - DATASET PREPARATION")
@@ -66,15 +108,21 @@ def main():
     )
     print(f"Generated {len(sample_items)} synthetic hull samples.")
 
-    # 3. Create Split Manifests with Leakage Prevention
+    # 3. Create Split Manifests with Leakage Prevention & Validation
     processed_dir = ROOT / cfg_paths["processed_dir"]
     processed_dir.mkdir(parents=True, exist_ok=True)
 
+    summary_report = {
+        "datasets": {}
+    }
+
     # 3a. MaVeCoDD splits
-    mav_samples = scan_mavecodd_samples(
+    mav_raw_samples = scan_mavecodd_samples(
         raw_mav_dir, zip_fallback=zip_mav,
         scene_block_size=config["dataset"].get("scene_block_size", 5)
     )
+    mav_samples, mav_errors = validate_and_enrich_samples(mav_raw_samples)
+    print(f"MaVeCoDD validation: {len(mav_samples)} valid pairs, {len(mav_errors)} errors.")
     if mav_samples:
         mav_splits = create_leakage_free_splits(
             mav_samples,
@@ -89,9 +137,16 @@ def main():
         for name, items in mav_splits.items():
             groups = sorted({s["scene_id"] for s in items})
             print(f"MaVeCoDD {name:5s}: {len(items):2d} images in {len(groups)} scene groups -> {', '.join(groups)}")
+        summary_report["datasets"]["mavecodd"] = {
+            "total_valid_pairs": len(mav_samples),
+            "validation_errors": mav_errors,
+            "splits": {k: len(v) for k, v in mav_splits.items()}
+        }
 
     # 3b. Underwater Crack splits
-    crack_samples = scan_crack_samples(raw_crack_dir, zip_fallback=zip_crack)
+    crack_raw_samples = scan_crack_samples(raw_crack_dir, zip_fallback=zip_crack)
+    crack_samples, crack_errors = validate_and_enrich_samples(crack_raw_samples)
+    print(f"Underwater Crack validation: {len(crack_samples)} valid pairs, {len(crack_errors)} errors.")
     if crack_samples:
         crack_splits = create_leakage_free_splits(
             crack_samples,
@@ -103,8 +158,14 @@ def main():
         )
         save_split_manifest(crack_splits, processed_dir / "split_manifest_crack.json")
         print(f"Underwater Crack Splits -> Train: {len(crack_splits['train'])}, Val: {len(crack_splits['val'])}, Test: {len(crack_splits['test'])}")
+        summary_report["datasets"]["underwater_crack"] = {
+            "total_valid_pairs": len(crack_samples),
+            "validation_errors": crack_errors,
+            "splits": {k: len(v) for k, v in crack_splits.items()}
+        }
 
     # 3c. Synthetic sample splits
+    sample_items, sample_errors = validate_and_enrich_samples(sample_items)
     sample_splits = create_leakage_free_splits(
         sample_items,
         train_ratio=config["dataset"]["train_split"],
@@ -115,6 +176,11 @@ def main():
     )
     save_split_manifest(sample_splits, processed_dir / "split_manifest_sample.json")
     print(f"Synthetic Sample Splits -> Train: {len(sample_splits['train'])}, Val: {len(sample_splits['val'])}, Test: {len(sample_splits['test'])}")
+
+    # Save summary report
+    import json
+    with open(processed_dir / "dataset_summary.json", "w", encoding="utf-8") as f:
+        json.dump(summary_report, f, indent=2)
 
     print("=" * 70)
     print("Dataset preparation completed successfully!")

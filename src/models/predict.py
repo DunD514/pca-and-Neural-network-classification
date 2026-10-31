@@ -167,10 +167,13 @@ class HullInspectionPredictor:
             vis[m] = (0.45 * vis[m] + 0.55 * np.array(defect_color)).astype(np.uint8)
 
         if show_boxes:
-            thick = max(2, int(round(max(vis.shape[:2]) / 400)))
+            thick = max(1, int(max(vis.shape[:2]) // 350))
             for b in pred_dict.get("bounding_boxes", []):
                 x1, y1, x2, y2 = b["bbox_pixel"]
-                cv2.rectangle(vis, (x1, y1), (x2, y2), defect_color, thick)
+                bx1, by1 = max(0, int(x1)), max(0, int(y1))
+                bx2, by2 = min(vis.shape[1] - 1, int(x2)), min(vis.shape[0] - 1, int(y2))
+                if bx2 > bx1 and by2 > by1:
+                    cv2.rectangle(vis, (bx1, by1), (bx2, by2), defect_color, thick)
         return vis
 
     @staticmethod

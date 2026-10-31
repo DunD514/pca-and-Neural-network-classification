@@ -3,12 +3,13 @@
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![PyTorch 2.x](https://img.shields.io/badge/PyTorch-2.8%2Bcu129-red.svg)](https://pytorch.org/)
 [![Apache Arrow](https://img.shields.io/badge/Apache%20Arrow-21.0-orange.svg)](https://arrow.apache.org/)
+[![Three.js](https://img.shields.io/badge/3D%20Viewport-Three.js%20WebGL-blueviolet.svg)](https://threejs.org/)
 [![Streamlit UI](https://img.shields.io/badge/Streamlit-1.50-FF4B4B.svg)](https://streamlit.io/)
-[![Test Suite](https://img.shields.io/badge/PyTest-28%20Passed-brightgreen.svg)](https://pytest.org/)
+[![Test Suite](https://img.shields.io/badge/PyTest-39%20Passed-brightgreen.svg)](https://pytest.org/)
 
-An end-to-end, academic-grade **Fundamentals of Machine Learning (FOML)** project simulating an autonomous underwater remotely operated vehicle (ROV) inspecting commercial ship hulls for visible structural defects (corrosion scale, oxidation, and fatigue cracks).
+An end-to-end, academic-grade **Fundamentals of Machine Learning (FOML) & Marine Robotics Simulation** project featuring an autonomous underwater remotely operated vehicle (ROV) inspecting commercial ship hulls for visible structural defects (corrosion scale, oxidation, and fatigue cracks) with a **real 3D underwater simulation and live 3D SLAM mapping pipeline**.
 
-The system integrates **traditional machine learning (handcrafted colour/texture features + SVM)**, **deep convolutional vision (Residual U-Net)**, **robotics trajectory and optical physics simulation**, **columnar Apache Parquet telemetry logging via PyArrow**, and an **interactive multi-page Streamlit inspection dashboard** with automated PDF report generation.
+The system integrates **traditional machine learning (handcrafted colour/texture features + SVM)**, **deep convolutional vision (Residual U-Net)**, **6-DOF hydrodynamic ROV physics (Fossen equations)**, **real-time 3D SLAM (Point-to-Plane ICP + EKF pose estimation + 3D Voxel Grid occupancy mapping)**, **multi-beam acoustic sonar array with physical ray-casting**, **synthetic camera pipeline with optical light attenuation**, **columnar Apache Parquet telemetry logging via PyArrow**, and an **interactive multi-page Streamlit inspection dashboard with an embedded WebGL Three.js 3D viewport**.
 
 ---
 
@@ -19,10 +20,26 @@ The system integrates **traditional machine learning (handcrafted colour/texture
    - **Model B (Deep Learning U-Net)**: Compact residual U-Net (2.0M parameters) predicting a corrosion mask for every pixel, trained on random crops with heavy augmentation and early stopping. Decision thresholds are calibrated on the validation split.
    - **Loss Formulation for Severe Class Imbalance**: Combined Binary Cross-Entropy + Soft Dice Loss ($\alpha=1.0, \beta=1.2, \gamma=0.5$).
 
-2. **Underwater Robotics & Optical Physics Simulation**:
-   - **Parametric Hull Geometry**: 50.0m $\times$ 10.0m vessel side surface partitioned into 10 structural inspection zones (Bow, Midship, Stern, Keel, Waterline).
-   - **ROV Kinematics**: Serpentine (lawnmower) path planner, thruster dynamics, acoustic DVL/USBL positioning uncertainty ($\sigma_{\text{pos}}=0.04$m), and coverage grid tracking.
-   - **Jaffe-McGlamery Optical Model**: Wavelength-dependent red light absorption ($c=0.65$), forward-scattering turbidity blur, contrast attenuation, and suspended marine snow particles.
+2. **3D Subsea Simulation & 6-DOF Hydrodynamic Physics**:
+   - **Full 6-DOF Equations of Motion (Fossen Dynamics)**: Simulates rigid body inertia, 6-DOF added mass tensor, linear and quadratic hydrodynamic damping, restoring buoyancy/gravity metacentric moments ($h_{BG} = 0.08$m), and 6-thruster actuator limits.
+   - **Real 3D Underwater Environment**: 50.0m $\times$ 10.0m ship hull with curved bow flare, keel turn, structural weld seams, underwater seabed, dynamic water surface, and lighting attenuation.
+   - **Downloadable URDF ROV Model**: Visible 6-thruster chassis, buoyancy pods, forward camera dome, LED headlights, and multi-beam acoustic sonar head ([rov.urdf](file:///models/rov/rov.urdf) licensed under CC BY 4.0).
+   - **Cascade PID Flight Controller**: Automated standoff-distance tracking (maintaining $1.0 - 1.2$m standoff from the hull surface) and heading alignment with hull surface normals.
+
+3. **Multi-Sensor Synthetic Pipeline & Real 3D SLAM**:
+   - **Multi-Beam Acoustic Sonar Array**: Physical ray-casting ($7 \times 5 = 35$ acoustic beams) calculating exact ray-hull intersections with surface normal estimation and distance measurement.
+   - **Synthetic Front-Facing Camera Pipeline**: Live perspective rendering of the ship hull plate, horizontal/vertical weld seams, visible registered corrosion defects, Jaffe-McGlamery wavelength-dependent red light absorption ($\alpha = 0.18$), and marine snow suspended particles.
+   - **6-DOF Synthetic IMU & Depth Sensor**: Noisy tri-axial accelerometer, angular gyro rates, magnetometer heading, and hydrostatic pressure depth measurements.
+   - **Real 3D SLAM Engine (`UnderwaterSLAM3D`)**:
+     - *State Estimation*: Extended Kalman Filter (EKF) propagating a 6-DOF state vector with full $6 \times 6$ covariance matrix $P$.
+     - *Scan Matching*: Point-to-Plane Iterative Closest Point (ICP) aligning live acoustic sonar point clouds to accumulated map geometry.
+     - *Occupancy Mapping*: 3D Voxel Grid updating observed hull surfaces and tracking unobserved areas.
+     - *Integrity & Error Tracking*: Computes Absolute Trajectory Error (ATE) comparing estimated SLAM pose against simulation ground truth.
+
+4. **Autonomous Zone Inspection & Mission Intelligence**:
+   - **Pre-Planned Inspection Routes**: Safe coverage routes for **Bow Section**, **Midship Forward**, **Midship Aft**, **Stern Section**, **Keel Turn**, and **Full Survey**.
+   - **Plain-English Mission Explainer**: Non-technical narration engine translating live telemetry, sensor readings, SLAM updates, and defect detections into plain-English explanations.
+   - **Automated Defect Registration**: Automatically passes camera frames into the U-Net inference engine upon detecting candidate defects, mapping segmented corrosion clusters to 3D hull coordinates.
 
 3. **High-Performance Columnar Storage**:
    - Strongly-typed Apache Arrow schema capturing 28 telemetry and inspection attributes per observation step.
@@ -218,11 +235,38 @@ Verify all components with automated unit and integration tests:
 pytest tests/ -v
 ```
 
-### 7. Launch Interactive Streamlit Dashboard
+### 7. Launch Interactive Streamlit Dashboard with 3D Simulation
 Launch the web interface in your browser:
 ```bash
 streamlit run app/streamlit_app.py
 ```
+Navigate to **ROV Drone Simulation** in the sidebar.
+
+---
+
+## 🕹️ 3D Subsea Simulation & SLAM Operational Guide
+
+### 1. Viewport & Navigation Controls
+- **Interactive 3D Three.js Viewport**: Drag left mouse button to rotate / orbit the camera, right-click to pan, scroll to zoom.
+- **Perspective Shortcuts**:
+  - `Follow ROV`: Locks the camera behind the inspection drone at an offset.
+  - `Free Orbit`: Allows unrestricted orbiting around the ship hull.
+  - `Top View`: Nadir projection looking down across the waterline and seabed.
+  - `Side View`: Direct elevation view parallel to the ship hull plates.
+  - `Front View`: Longitudinal bow-to-stern perspective.
+  - `Reset View`: Centers the view at the midship inspection station.
+
+### 2. Autonomous Inspection & Piloting Modes
+- **Autonomous Zone Route**: Select from **Bow Section**, **Midship Forward**, **Midship Aft**, **Stern Section**, **Keel Turn**, or **Full Survey**. The cascade flight controller tracks surface normals and dynamically maintains a $1.0 - 1.2$m standoff distance.
+- **Manual Piloting Override**: Command Surge (Forward/Back), Sway (Port/Starboard), Heave (Ascend/Descend), and Yaw heading in real time.
+- **Execution Buttons**:
+  - `Step +1`: Integrates the 6-DOF Fossen dynamics by $dt = 0.05$s, fires the acoustic sonar array, captures the synthetic camera frame, runs Point-to-Plane ICP matching, updates the EKF covariance matrix, and grows the 3D voxel grid.
+  - `Fast +10`: Advances 10 consecutive simulation steps for rapid inspection transit.
+  - `Reset Mission`: Clears the SLAM occupancy map, resets the EKF covariance, and repositions the ROV to its starting mooring point.
+
+### 3. Plain-English Commentary & Live Telemetry
+- Below the 3D viewport, the **Plain-English Mission Commentary** provides clear, real-time natural language updates explaining what the drone is currently doing (e.g. tracking waypoints, observing new hull geometry, adding voxels to the SLAM map, or analyzing candidate corrosion patches).
+- **Sensor Dashboard**: Displays Submerged Depth (m), Hull Standoff Distance (m), 3D SLAM Voxel Count, and Estimated Localization Absolute Trajectory Error (ATE).
 
 ---
 

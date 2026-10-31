@@ -1,0 +1,208 @@
+<?xml version="1.0" ?>
+<!-- 
+  Open Underwater Inspection ROV (Remotely Operated Vehicle) URDF Specification
+  License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  Coordinate Convention: ROS Standard (REP-103/REP-105)
+    Forward = +X, Left = +Y, Up = +Z
+-->
+<robot name="underwater_inspection_rov">
+
+  <!-- Base footprint / link -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <mass value="32.0"/>
+      <inertia ixx="1.2" ixy="0.0" ixz="0.0" iyy="1.8" iyz="0.0" izz="1.6"/>
+    </inertial>
+    <!-- Main cylindrical electronics enclosure -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079 0"/>
+      <geometry>
+        <cylinder length="0.55" radius="0.14"/>
+      </geometry>
+      <material name="acrylic_blue">
+        <color rgba="0.08 0.22 0.38 0.95"/>
+      </material>
+    </visual>
+    <!-- Open frame chassis -->
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.65 0.45 0.32"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Buoyancy Foam Block (Mounted on Top) -->
+  <link name="buoyancy_block">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.60 0.42 0.12"/>
+      </geometry>
+      <material name="high_vis_yellow">
+        <color rgba="0.95 0.78 0.05 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_buoyancy" type="fixed">
+    <parent link="base_link"/>
+    <child link="buoyancy_block"/>
+    <origin xyz="0 0 0.14" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Forward Inspection Camera Dome -->
+  <link name="camera_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079 0"/>
+      <geometry>
+        <sphere radius="0.07"/>
+      </geometry>
+      <material name="dome_glass">
+        <color rgba="0.2 0.8 1.0 0.6"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_camera" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.32 0 0.02" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Multi-Beam Sonar / Rangefinder Head -->
+  <link name="sonar_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.06" radius="0.05"/>
+      </geometry>
+      <material name="titanium_dark">
+        <color rgba="0.15 0.15 0.18 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_sonar" type="fixed">
+    <parent link="base_link"/>
+    <child link="sonar_link"/>
+    <origin xyz="0.30 0 -0.10" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU Sensor Link -->
+  <link name="imu_link"/>
+  <joint name="joint_imu" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Depth Pressure Sensor Port -->
+  <link name="depth_sensor_link"/>
+  <joint name="joint_depth" type="fixed">
+    <parent link="base_link"/>
+    <child link="depth_sensor_link"/>
+    <origin xyz="-0.15 0 -0.12" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Horizontal Vectored Thrusters (45 deg angle) -->
+  <link name="thruster_fwd_stbd">
+    <visual>
+      <geometry><cylinder length="0.10" radius="0.045"/></geometry>
+      <material name="black_prop"><color rgba="0.1 0.1 0.1 1.0"/></material>
+    </visual>
+  </link>
+  <joint name="joint_thruster_fwd_stbd" type="continuous">
+    <parent link="base_link"/>
+    <child link="thruster_fwd_stbd"/>
+    <origin xyz="0.22 0.20 0.0" rpy="0 0 0.7854"/>
+    <axis xyz="1 0 0"/>
+  </joint>
+
+  <link name="thruster_fwd_port">
+    <visual>
+      <geometry><cylinder length="0.10" radius="0.045"/></geometry>
+      <material name="black_prop"><color rgba="0.1 0.1 0.1 1.0"/></material>
+    </visual>
+  </link>
+  <joint name="joint_thruster_fwd_port" type="continuous">
+    <parent link="base_link"/>
+    <child link="thruster_fwd_port"/>
+    <origin xyz="0.22 -0.20 0.0" rpy="0 0 -0.7854"/>
+    <axis xyz="1 0 0"/>
+  </joint>
+
+  <link name="thruster_aft_stbd">
+    <visual>
+      <geometry><cylinder length="0.10" radius="0.045"/></geometry>
+      <material name="black_prop"><color rgba="0.1 0.1 0.1 1.0"/></material>
+    </visual>
+  </link>
+  <joint name="joint_thruster_aft_stbd" type="continuous">
+    <parent link="base_link"/>
+    <child link="thruster_aft_stbd"/>
+    <origin xyz="-0.22 0.20 0.0" rpy="0 0 -0.7854"/>
+    <axis xyz="1 0 0"/>
+  </joint>
+
+  <link name="thruster_aft_port">
+    <visual>
+      <geometry><cylinder length="0.10" radius="0.045"/></geometry>
+      <material name="black_prop"><color rgba="0.1 0.1 0.1 1.0"/></material>
+    </visual>
+  </link>
+  <joint name="joint_thruster_aft_port" type="continuous">
+    <parent link="base_link"/>
+    <child link="thruster_aft_port"/>
+    <origin xyz="-0.22 -0.20 0.0" rpy="0 0 0.7854"/>
+    <axis xyz="1 0 0"/>
+  </joint>
+
+  <!-- Vertical Thrusters (Heave & Pitch control) -->
+  <link name="thruster_vert_stbd">
+    <visual>
+      <geometry><cylinder length="0.10" radius="0.045"/></geometry>
+      <material name="black_prop"><color rgba="0.1 0.1 0.1 1.0"/></material>
+    </visual>
+  </link>
+  <joint name="joint_thruster_vert_stbd" type="continuous">
+    <parent link="base_link"/>
+    <child link="thruster_vert_stbd"/>
+    <origin xyz="0 0.22 0.0" rpy="1.57079 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="thruster_vert_port">
+    <visual>
+      <geometry><cylinder length="0.10" radius="0.045"/></geometry>
+      <material name="black_prop"><color rgba="0.1 0.1 0.1 1.0"/></material>
+    </visual>
+  </link>
+  <joint name="joint_thruster_vert_port" type="continuous">
+    <parent link="base_link"/>
+    <child link="thruster_vert_port"/>
+    <origin xyz="0 -0.22 0.0" rpy="1.57079 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <!-- Dual LED Floodlights -->
+  <link name="light_port">
+    <visual><geometry><cylinder length="0.05" radius="0.035"/></geometry><material name="cyan_light"><color rgba="0.0 0.9 1.0 1.0"/></material></visual>
+  </link>
+  <joint name="joint_light_port" type="fixed">
+    <parent link="base_link"/>
+    <child link="light_port"/>
+    <origin xyz="0.28 -0.16 0.06" rpy="0 0 0"/>
+  </joint>
+
+  <link name="light_stbd">
+    <visual><geometry><cylinder length="0.05" radius="0.035"/></geometry><material name="cyan_light"><color rgba="0.0 0.9 1.0 1.0"/></material></visual>
+  </link>
+  <joint name="joint_light_stbd" type="fixed">
+    <parent link="base_link"/>
+    <child link="light_stbd"/>
+    <origin xyz="0.28 0.16 0.06" rpy="0 0 0"/>
+  </joint>
+
+</robot>

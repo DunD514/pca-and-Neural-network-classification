@@ -12,10 +12,13 @@ from src.simulation.inspection_path import SerpentinePathPlanner
 from src.simulation.camera import SimulatedUnderwaterCamera
 from src.simulation.sensors import ROVSensorSuite
 from src.models.predict import HullInspectionPredictor
+from src.simulation.environment_3d import ShipHull3DEnvironment
+from src.simulation.slam import UnderwaterSLAM3D
+from src.simulation.plain_english_explainer import PlainEnglishMissionExplainer
 
 
 class HullInspectionSimulator:
-    """End-to-end autonomous hull inspection simulator integrating robotics and machine learning."""
+    """End-to-end autonomous hull inspection simulator integrating robotics, 3D SLAM, and ML."""
 
     def __init__(
         self,
@@ -31,6 +34,14 @@ class HullInspectionSimulator:
         self.camera = camera or SimulatedUnderwaterCamera()
         self.predictor = predictor
         self.sample_pool = sample_pool or []
+
+        # 3D Environment & 3D SLAM Engine
+        self.env_3d = ShipHull3DEnvironment(length_m=self.hull.length_m, height_m=self.hull.height_m)
+        self.slam = UnderwaterSLAM3D(
+            initial_pose=(self.rov.x, self.rov.y, self.rov.z),
+            initial_rpy=(0.0, 0.0, self.rov.heading_deg)
+        )
+        self.explainer = PlainEnglishMissionExplainer()
 
         self.sensor_suite = ROVSensorSuite(waterline_y_m=self.hull.height_m, safe_standoff_m=1.2)
         self.inspection_id = inspection_id or f"INSP_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
@@ -151,11 +162,39 @@ class HullInspectionSimulator:
 
         self.inspection_logs.append(record)
 
+        # Run 3D SLAM estimation cycle
+        lidar_pts = sensor_data["lidar"].get("point_cloud", [])
+        pts_body = np.array([[p["local_x_m"], 0.0, p["local_z_m"]] for p in lidar_pts]) if lidar_pts else np.zeros((0, 3))
+        measured_vel = np.array([self.rov.vx, self.rov.vy, self.rov.vz]) + np.random.normal(0, 0.02, 3)
+        measured_gyro = np.array([0.0, 0.0, np.radians(pose["measured_heading_deg"] - pose["true_heading_deg"])])
+
+        slam_result = self.slam.step(
+            true_pose={"x": pose["true_x"], "y": pose["true_y"], "z": pose["true_z"], "yaw_deg": pose["true_heading_deg"]},
+            measured_vel_body=measured_vel,
+            measured_gyro=measured_gyro,
+            points_body=pts_body,
+            has_defect=has_defect,
+            dt_s=dt_s
+        )
+
+        # Generate Plain-English Commentary
+        commentary = self.explainer.generate_commentary({
+            "current_zone": zone_id,
+            "mode": "AUTONOMOUS",
+            "avionics": {"submerged_depth_m": sensor_data["depth_pressure"]["submerged_depth_m"], "speed_mps": self.rov.speed_mps},
+            "sonar": {"mean_standoff_m": sensor_data["lidar"]["min_distance_m"]},
+            "slam": slam_result,
+            "ml_prediction": ml_result,
+            "camera": obs
+        })
+
         return {
             "record": record,
             "observation": obs,
             "ml_result": ml_result,
             "sensor_data": sensor_data,
+            "slam": slam_result,
+            "plain_english": commentary,
             "waypoint_progress": f"{self.current_waypoint_idx}/{len(self.waypoints)}",
             "coverage_pct": self.hull.get_coverage_percentage(),
             "status": "in_progress" if not self.is_completed else "completed"

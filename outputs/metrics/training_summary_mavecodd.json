@@ -1,13 +1,13 @@
 {
   "dataset": "mavecodd",
-  "device": "cpu",
+  "device": "cuda",
   "split_sizes": {
     "train": 44,
     "val": 16,
     "test": 16
   },
   "baseline": {
-    "training_time_s": 35.39,
+    "training_time_s": 53.9,
     "n_train_patches": 406,
     "feature_dim": 47,
     "train_balanced_accuracy": 0.9091614906832298,
