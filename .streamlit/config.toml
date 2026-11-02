@@ -8,6 +8,16 @@ font = "sans serif"
 
 [client]
 toolbarMode = "minimal"
+showErrorDetails = false
 
 [server]
 headless = true
+address = "0.0.0.0"
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 100
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false

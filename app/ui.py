@@ -546,6 +546,7 @@ def sidebar_status() -> None:
             st.caption("Run training + evaluation to compile benchmarks.")
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def load_metrics(dataset: str = "mavecodd") -> Optional[Dict[str, Any]]:
     """Evaluation metrics written by scripts/evaluate_model.py (None if missing or outdated)."""
     f = ROOT / "outputs" / "metrics" / f"test_metrics_{dataset}.json"
@@ -558,6 +559,7 @@ def load_metrics(dataset: str = "mavecodd") -> Optional[Dict[str, Any]]:
         return None
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def load_training_summary(dataset: str = "mavecodd") -> Optional[Dict[str, Any]]:
     f = ROOT / "outputs" / "metrics" / f"training_summary_{dataset}.json"
     if not f.exists():
@@ -568,6 +570,7 @@ def load_training_summary(dataset: str = "mavecodd") -> Optional[Dict[str, Any]]
         return None
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def load_split_lookup(dataset: str = "mavecodd") -> Dict[str, str]:
     """image_id -> 'train' / 'val' / 'test'."""
     f = ROOT / "data" / "processed" / f"split_manifest_{dataset}.json"

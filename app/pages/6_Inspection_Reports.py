@@ -24,8 +24,24 @@ page_header(
     chips=["Apache Arrow Columnar Schema", "Snappy Compressed Parquet", "DNV / Lloyd's Compliant PDF"],
 )
 
+
+@st.cache_data(ttl=20, show_spinner=False)
+def get_cached_inspections(logs_dir_str: str):
+    return list_available_inspections(Path(logs_dir_str))
+
+
+@st.cache_data(show_spinner=False)
+def get_cached_summary(parquet_path_str: str):
+    return get_inspection_summary(Path(parquet_path_str))
+
+
+@st.cache_data(show_spinner=False)
+def get_cached_df(parquet_path_str: str):
+    return read_inspection_log(Path(parquet_path_str))
+
+
 logs_dir = ROOT / "outputs" / "inspection_logs"
-inspections = list_available_inspections(logs_dir)
+inspections = get_cached_inspections(str(logs_dir))
 
 if not inspections:
     callout(
@@ -45,8 +61,8 @@ selected_insp = inspections[selected_idx]
 parquet_path = Path(selected_insp["file_path"])
 
 # Load summary and DataFrame
-summary = get_inspection_summary(parquet_path)
-df = read_inspection_log(parquet_path)
+summary = get_cached_summary(str(parquet_path))
+df = get_cached_df(str(parquet_path))
 
 # KPI Cards row
 c1, c2, c3, c4 = st.columns(4)

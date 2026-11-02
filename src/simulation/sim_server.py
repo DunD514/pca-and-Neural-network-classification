@@ -144,7 +144,7 @@ def ensure_simulation_server_running(preferred_port: int = 8502) -> int:
 
         for port in [preferred_port, 8503, 8504, 8505, 8506]:
             try:
-                server = ReusableTCPServer(("127.0.0.1", port), SimulationRequestHandler)
+                server = ReusableTCPServer(("0.0.0.0", port), SimulationRequestHandler)
                 _SERVER_INSTANCE = server
                 _SERVER_PORT = port
                 thread = threading.Thread(target=server.serve_forever, daemon=True)

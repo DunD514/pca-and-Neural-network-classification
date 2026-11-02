@@ -27,6 +27,17 @@ page_header(
     chips=["MaVeCoDD Corrosion", "Underwater Crack Dataset", "Stratified Split Manifests"],
 )
 
+
+@st.cache_data(show_spinner=False)
+def get_cached_mavecodd(raw_dir_str: str, zip_fallback_str: str):
+    return scan_mavecodd_samples(Path(raw_dir_str), zip_fallback=Path(zip_fallback_str) if zip_fallback_str else None)
+
+
+@st.cache_data(show_spinner=False)
+def get_cached_cracks(raw_dir_str: str, zip_fallback_str: str, limit: int = 100):
+    return scan_crack_samples(Path(raw_dir_str), zip_fallback=Path(zip_fallback_str) if zip_fallback_str else None, limit=limit)
+
+
 ds_tab = (
     st.segmented_control(
         "Dataset View",
@@ -44,7 +55,7 @@ if ds_tab == "MaVeCoDD (Marine Vessel Corrosion)":
     - **Resolution Tiers**: HiRes (up to 4032 &times; 3024) and LoRes (1920 &times; 1080).
     """)
 
-    mav_samples = scan_mavecodd_samples(ROOT / "data/raw/mavecodd", zip_fallback=ROOT / "ry392rp8cj-1.zip")
+    mav_samples = get_cached_mavecodd(str(ROOT / "data/raw/mavecodd"), str(ROOT / "ry392rp8cj-1.zip"))
 
     if mav_samples:
         df_mav = pd.DataFrame(mav_samples)
@@ -102,8 +113,8 @@ elif ds_tab == "Underwater Crack Dataset":
     - **Annotation Standard**: Binary PNG segmentation masks (Crack = 255, Sound Background = 0).
     """)
 
-    crack_samples = scan_crack_samples(
-        ROOT / "data/raw/underwater_crack", zip_fallback=ROOT / "under-crack-images.zip", limit=100
+    crack_samples = get_cached_cracks(
+        str(ROOT / "data/raw/underwater_crack"), str(ROOT / "under-crack-images.zip"), limit=100
     )
     kpi_card(str(len(crack_samples)), "Indexed Subsea Samples (Displaying Top 100)", icon="🌊")
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)

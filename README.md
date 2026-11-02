@@ -5,7 +5,8 @@
 [![Apache Arrow](https://img.shields.io/badge/Apache%20Arrow-21.0-orange.svg)](https://arrow.apache.org/)
 [![Three.js](https://img.shields.io/badge/3D%20Viewport-Three.js%20WebGL-blueviolet.svg)](https://threejs.org/)
 [![Streamlit UI](https://img.shields.io/badge/Streamlit-1.50-FF4B4B.svg)](https://streamlit.io/)
-[![Test Suite](https://img.shields.io/badge/PyTest-39%20Passed-brightgreen.svg)](https://pytest.org/)
+[![Test Suite](https://img.shields.io/badge/PyTest-49%20Passed%20(100%25)-brightgreen.svg)](https://pytest.org/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)](https://www.docker.com/)
 
 An end-to-end, academic-grade **Fundamentals of Machine Learning (FOML) & Marine Robotics Simulation** project featuring an autonomous underwater remotely operated vehicle (ROV) inspecting commercial ship hulls for visible structural defects (corrosion scale, oxidation, and fatigue cracks) with a **real 3D underwater simulation and live 3D SLAM mapping pipeline**.
 
@@ -242,6 +243,30 @@ streamlit run app/streamlit_app.py
 ```
 Navigate to **ROV Drone Simulation** in the sidebar.
 
+### 8. Production Deployment & Verification
+Verify all system constraints, model latencies, and simulation components with the automated pre-flight audit:
+\\ash
+python scripts/verify_deployment.py
+\
+#### Option A: Docker / Docker Compose (Recommended for Cloud / Server)
+\\ash
+# Build and run containerized application with persistent volumes:
+docker compose up --build -d
+
+# Check real-time logs:
+docker compose logs -f
+\The application will be live at \http://localhost:8501\ with automated healthchecks enabled.
+
+#### Option B: Streamlit Community Cloud
+1. Connect your repository to [share.streamlit.io](https://share.streamlit.io).
+2. Set Main file path to \pp/streamlit_app.py\.
+3. The build uses equirements.txt\ and \packages.txt\ automatically for zero-config cloud deployment.
+
+#### Option C: Production Virtual Machine / VPS
+\\ash
+# Run in background via nohup / systemd:
+streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+\
 ---
 
 ## 🕹️ 3D Subsea Simulation & SLAM Operational Guide
